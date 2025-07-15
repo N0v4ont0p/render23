@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>George's Photo Gallery</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 20px 0;
+            text-align: center;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            color: #4a5568;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .header p {
+            color: #718096;
+            font-size: 1.1rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        .gallery-section, .admin-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .section-title {
+            font-size: 1.8rem;
+            color: #4a5568;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .collections-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .collection-card {
+            background: #f7fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .collection-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+            border-color: #667eea;
+        }
+
+        .photos-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
+        }
+
+        .photo-card {
+            background: #fff;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .photo-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .photo-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+
+        .photo-info {
+            padding: 20px;
+        }
+
+        .photo-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 8px;
+        }
+
+        .photo-description {
+            color: #718096;
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+
+        .collection-tag {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            margin-bottom: 15px;
+        }
+
+        .no-collection {
+            background: #a0aec0;
+        }
+
+        .admin-login {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .admin-login input {
+            padding: 12px 20px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 1rem;
+            margin-right: 10px;
+            width: 250px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #38a169;
+        }
+
+        .btn-danger {
+            background: #f56565;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #e53e3e;
+        }
+
+        .btn-secondary {
+            background: #a0aec0;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #718096;
+        }
+
+        .upload-area {
+            border: 3px dashed #cbd5e0;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .upload-area:hover, .upload-area.dragover {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 1rem;
+        }
+
+        .form-group textarea {
+            height: 100px;
+            resize: vertical;
+        }
+
+        .collections-management {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .collections-management input {
+            flex: 1;
+            min-width: 200px;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 1rem;
+        }
+
+        .photos-management {
+            margin-top: 30px;
+        }
+
+        .bulk-actions {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .photo-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+
+        .photo-item img {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+
+        .photo-details {
+            flex: 1;
+        }
+
+        .photo-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #718096;
+        }
+
+        .error-message {
+            background: #fed7d7;
+            color: #c53030;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #feb2b2;
+        }
+
+        .success-message {
+            background: #c6f6d5;
+            color: #2f855a;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #9ae6b4;
+        }
+
+        .retry-button {
+            background: #ed8936;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+
+        .retry-button:hover {
+            background: #dd6b20;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .photos-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .collections-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .bulk-actions {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .photo-item {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .photo-actions {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>
+            📸 George's Photo Gallery
+        </h1>
+        <div>
+            <p>Your personal photo collection with collections</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Photo Gallery Section -->
+        <div class="gallery-section">
+            <h2 class="section-title">
+                📁 Collections
+            </h2>
+            <div id="collectionsContainer">
+                <div class="loading">Loading collections...</div>
+            </div>
+
+            <h2 class="section-title">
+                🖼️ All Photos
+            </h2>
+            <div id="photosContainer">
+                <div class="loading">Loading photos...</div>
+            </div>
+        </div>
+
+        <!-- Admin Panel -->
+        <div class="admin-section">
+            <h2 class="section-title">
+                🔐 Admin Panel
+            </h2>
+            
+            <div id="adminLogin" class="admin-login">
+                <input type="password" id="adminPassword" placeholder="Enter admin password">
+                <button class="btn btn-primary" onclick="adminLogin()">Login</button>
+            </div>
+
+            <div id="adminContent" class="hidden">
+                <!-- Upload Photos -->
+                <h3 class="section-title">
+                    📤 Upload Photos
+                </h3>
+                
+                <div class="upload-area" onclick="document.getElementById('photoInput').click()">
+                    📁 Drag & Drop Photos Here<br>
+                    or click to select files
+                </div>
+                <input type="file" id="photoInput" multiple accept="image/*" style="display: none;">
+
+                <div class="form-group">
+                    <label>Photo Title:</label>
+                    <input type="text" id="photoTitle" placeholder="Enter photo title">
+                </div>
+
+                <div class="form-group">
+                    <label>Description:</label>
+                    <textarea id="photoDescription" placeholder="Enter photo description"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Collection:</label>
+                    <select id="photoCollection">
+                        <option value="">No Collection</option>
+                    </select>
+                </div>
+
+                <button class="btn btn-primary" onclick="uploadPhotos()">Upload Photos</button>
+
+                <!-- Collections Management -->
+                <h3 class="section-title">
+                    📁 Collections Management
+                </h3>
+                
+                <div class="collections-management">
+                    <input type="text" id="newCollectionName" placeholder="Enter collection name">
+                    <button class="btn btn-success" onclick="addCollection()">Add Collection</button>
+                    <button class="btn btn-secondary" onclick="refreshCollections()">Refresh Collections</button>
+                </div>
+
+                <div id="adminCollectionsContainer">
+                    <div class="loading">Loading collections...</div>
+                </div>
+
+                <!-- Photos Management -->
+                <div class="photos-management">
+                    <h3 class="section-title">
+                        📸 Photos Management
+                    </h3>
+                    
+                    <div class="bulk-actions">
+                        <label>
+                            <input type="checkbox" id="selectAll" onchange="toggleSelectAll()"> Select All
+                        </label>
+                        <select id="bulkCollection">
+                            <option value="">No Collection</option>
+                        </select>
+                        <button class="btn btn-primary" onclick="addSelectedPhotosToCollection()">Add to Collection</button>
+                    </div>
+
+                    <div id="adminPhotosContainer">
+                        <div class="loading">Loading photos...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isAdminLoggedIn = false;
+        let photos = [];
+        let collections = [];
+        let selectedFiles = [];
+
+        // Enhanced error handling
+        function showError(message, container = null, showRetry = false, retryFunction = null) {
+            const errorHtml = `
+                <div class="error-message">
+                    ❌ ${message}
+                    ${showRetry ? `<button class="retry-button" onclick="${retryFunction}()">Retry</button>` : ''}
+                </div>
+            `;
+            
+            if (container) {
+                container.innerHTML = errorHtml;
+            } else {
+                // Show global error
+                const existingError = document.querySelector('.error-message');
+                if (existingError) {
+                    existingError.remove();
+                }
+                document.querySelector('.container').insertAdjacentHTML('afterbegin', errorHtml);
+            }
+        }
+
+        function showSuccess(message) {
+            const existingMessages = document.querySelectorAll('.success-message, .error-message');
+            existingMessages.forEach(msg => msg.remove());
+            
+            const successHtml = `<div class="success-message">✅ ${message}</div>`;
+            document.querySelector('.container').insertAdjacentHTML('afterbegin', successHtml);
+            
+            setTimeout(() => {
+                const successMsg = document.querySelector('.success-message');
+                if (successMsg) successMsg.remove();
+            }, 5000);
+        }
+
+        // Enhanced API calls with retry logic
+        async function apiCall(url, options = {}, retries = 3) {
+            for (let attempt = 1; attempt <= retries; attempt++) {
+                try {
+                    const response = await fetch(url, {
+                        ...options,
+                        headers: {
+                            'Content-Type': 'application/json',
+                            ...options.headers
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+
+                    const data = await response.json();
+                    
+                    if (data.success === false) {
+                        throw new Error(data.error || 'API request failed');
+                    }
+                    
+                    return data;
+                } catch (error) {
+                    console.error(`API call attempt ${attempt} failed:`, error);
+                    
+                    if (attempt === retries) {
+                        throw error;
+                    }
+                    
+                    // Wait before retry
+                    await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+                }
+            }
+        }
+
+        // Load photos with error handling
+        async function loadPhotos() {
+            const container = document.getElementById('photosContainer');
+            const adminContainer = document.getElementById('adminPhotosContainer');
+            
+            try {
+                container.innerHTML = '<div class="loading">Loading photos...</div>';
+                if (adminContainer) {
+                    adminContainer.innerHTML = '<div class="loading">Loading photos...</div>';
+                }
+
+                photos = await apiCall('/api/photos');
+                displayPhotos();
+                if (isAdminLoggedIn) {
+                    displayAdminPhotos();
+                }
+            } catch (error) {
+                console.error('Error loading photos:', error);
+                showError(`Failed to load photos: ${error.message}`, container, true, 'loadPhotos');
+                if (adminContainer) {
+                    showError(`Failed to load photos: ${error.message}`, adminContainer, true, 'loadPhotos');
+                }
+            }
+        }
+
+        // Load collections with error handling
+        async function loadCollections() {
+            const container = document.getElementById('collectionsContainer');
+            const adminContainer = document.getElementById('adminCollectionsContainer');
+            
+            try {
+                container.innerHTML = '<div class="loading">Loading collections...</div>';
+                if (adminContainer) {
+                    adminContainer.innerHTML = '<div class="loading">Loading collections...</div>';
+                }
+
+                collections = await apiCall('/api/collections');
+                displayCollections();
+                updateCollectionSelects();
+                if (isAdminLoggedIn) {
+                    displayAdminCollections();
+                }
+            } catch (error) {
+                console.error('Error loading collections:', error);
+                showError(`Failed to load collections: ${error.message}`, container, true, 'loadCollections');
+                if (adminContainer) {
+                    showError(`Failed to load collections: ${error.message}`, adminContainer, true, 'loadCollections');
+                }
+            }
+        }
+
+        function displayPhotos() {
+            const container = document.getElementById('photosContainer');
+            
+            if (!photos || photos.length === 0) {
+                container.innerHTML = '<div class="loading">No photos uploaded yet.</div>';
+                return;
+            }
+
+            const photosHtml = photos.map(photo => `
+                <div class="photo-card">
+                    <img src="${photo.url}" alt="${photo.title}" loading="lazy">
+                    <div class="photo-info">
+                        <div class="photo-title">${photo.title}</div>
+                        <div class="photo-description">${photo.description || ''}</div>
+                        <div class="collection-tag ${photo.collection_name ? '' : 'no-collection'}">
+                            ${photo.collection_name || 'No Collection'}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            container.innerHTML = `<div class="photos-grid">${photosHtml}</div>`;
+        }
+
+        function displayCollections() {
+            const container = document.getElementById('collectionsContainer');
+            
+            if (!collections || collections.length === 0) {
+                container.innerHTML = '<div class="loading">No collections created yet.</div>';
+                return;
+            }
+
+            const collectionsHtml = collections.map(collection => {
+                const photoCount = photos.filter(photo => 
+                    photo.collection_name === collection.name
+                ).length;
+                
+                return `
+                    <div class="collection-card" onclick="viewCollection('${collection.name}')">
+                        <h3>${collection.name}</h3>
+                        <p>${photoCount} photo(s)</p>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = `<div class="collections-grid">${collectionsHtml}</div>`;
+        }
+
+        function displayAdminCollections() {
+            const container = document.getElementById('adminCollectionsContainer');
+            
+            if (!collections || collections.length === 0) {
+                container.innerHTML = '<div class="loading">No collections created yet.</div>';
+                return;
+            }
+
+            const collectionsHtml = collections.map(collection => {
+                const photoCount = photos.filter(photo => 
+                    photo.collection_name === collection.name
+                ).length;
+                
+                return `
+                    <div class="photo-item">
+                        <div class="photo-details">
+                            <div class="photo-title">${collection.name}</div>
+                            <div class="photo-description">${photoCount} photo(s)</div>
+                        </div>
+                        <div class="photo-actions">
+                            <button class="btn btn-danger" onclick="deleteCollection(${collection.id}, '${collection.name}')">Delete</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = collectionsHtml;
+        }
+
+        function displayAdminPhotos() {
+            const container = document.getElementById('adminPhotosContainer');
+            
+            if (!photos || photos.length === 0) {
+                container.innerHTML = '<div class="loading">No photos uploaded yet.</div>';
+                return;
+            }
+
+            const photosHtml = photos.map((photo, index) => `
+                <div class="photo-item">
+                    <input type="checkbox" class="photo-checkbox" data-photo-id="${index}">
+                    <img src="${photo.url}" alt="${photo.title}">
+                    <div class="photo-details">
+                        <div class="photo-title">${photo.title}</div>
+                        <div class="photo-description">${photo.description || ''}</div>
+                        <div class="collection-tag ${photo.collection_name ? '' : 'no-collection'}">
+                            ${photo.collection_name || 'No Collection'}
+                        </div>
+                    </div>
+                    <div class="photo-actions">
+                        <button class="btn btn-primary" onclick="editPhotoCollections(${index})">Edit Collections</button>
+                        <button class="btn btn-danger" onclick="deletePhoto(${index})">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+
+            container.innerHTML = photosHtml;
+        }
+
+        function updateCollectionSelects() {
+            const selects = ['photoCollection', 'bulkCollection'];
+            
+            selects.forEach(selectId => {
+                const select = document.getElementById(selectId);
+                if (select) {
+                    const currentValue = select.value;
+                    select.innerHTML = '<option value="">No Collection</option>';
+                    
+                    collections.forEach(collection => {
+                        const option = document.createElement('option');
+                        option.value = collection.id;
+                        option.textContent = collection.name;
+                        option.dataset.name = collection.name;
+                        select.appendChild(option);
+                    });
+                    
+                    select.value = currentValue;
+                }
+            });
+        }
+
+        // Admin functions with error handling
+        function adminLogin() {
+            const password = document.getElementById('adminPassword').value;
+            if (password === 'Hanshow99@') {
+                isAdminLoggedIn = true;
+                document.getElementById('adminLogin').classList.add('hidden');
+                document.getElementById('adminContent').classList.remove('hidden');
+                loadCollections();
+                loadPhotos();
+                showSuccess('Admin login successful!');
+            } else {
+                showError('Invalid admin password');
+            }
+        }
+
+        async function addCollection() {
+            const name = document.getElementById('newCollectionName').value.trim();
+            
+            if (!name) {
+                showError('Please enter a collection name');
+                return;
+            }
+
+            try {
+                const result = await apiCall('/api/collections', {
+                    method: 'POST',
+                    body: JSON.stringify({ name })
+                });
+
+                showSuccess(result.message || 'Collection created successfully!');
+                document.getElementById('newCollectionName').value = '';
+                await loadCollections();
+            } catch (error) {
+                console.error('Error creating collection:', error);
+                showError(`Failed to create collection: ${error.message}`);
+            }
+        }
+
+        async function deleteCollection(collectionId, collectionName) {
+            if (!confirm(`Are you sure you want to delete the collection "${collectionName}"?`)) {
+                return;
+            }
+
+            try {
+                const result = await apiCall(`/api/collections/${collectionId}`, {
+                    method: 'DELETE'
+                });
+
+                showSuccess(result.message || 'Collection deleted successfully!');
+                await loadCollections();
+                await loadPhotos();
+            } catch (error) {
+                console.error('Error deleting collection:', error);
+                showError(`Failed to delete collection: ${error.message}`);
+            }
+        }
+
+        async function refreshCollections() {
+            await loadCollections();
+            showSuccess('Collections refreshed!');
+        }
+
+        // File upload handling
+        document.getElementById('photoInput').addEventListener('change', function(e) {
+            selectedFiles = Array.from(e.target.files);
+            updateUploadArea();
+        });
+
+        function updateUploadArea() {
+            const uploadArea = document.querySelector('.upload-area');
+            if (selectedFiles.length > 0) {
+                uploadArea.innerHTML = `📁 ${selectedFiles.length} file(s) selected<br>Click "Upload Photos" to proceed`;
+                uploadArea.style.borderColor = '#48bb78';
+                uploadArea.style.background = 'rgba(72, 187, 120, 0.05)';
+            } else {
+                uploadArea.innerHTML = '📁 Drag & Drop Photos Here<br>or click to select files';
+                uploadArea.style.borderColor = '#cbd5e0';
+                uploadArea.style.background = 'transparent';
+            }
+        }
+
+        async function uploadPhotos() {
+            if (selectedFiles.length === 0) {
+                showError('Please select photos to upload');
+                return;
+            }
+
+            const title = document.getElementById('photoTitle').value.trim();
+            const description = document.getElementById('photoDescription').value.trim();
+            const collectionSelect = document.getElementById('photoCollection');
+            const collectionId = collectionSelect.value;
+            const collectionName = collectionSelect.selectedOptions[0]?.dataset.name || '';
+
+            const formData = new FormData();
+            selectedFiles.forEach(file => {
+                formData.append('photos', file);
+            });
+
+            if (title) formData.append('title', title);
+            if (description) formData.append('description', description);
+            if (collectionId) formData.append('collection_id', collectionId);
+            if (collectionName) formData.append('collection_name', collectionName);
+
+            try {
+                const response = await fetch('/api/photos', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                
+                if (result.success === false) {
+                    throw new Error(result.error || 'Upload failed');
+                }
+
+                showSuccess(result.message || 'Photos uploaded successfully!');
+                
+                // Reset form
+                document.getElementById('photoTitle').value = '';
+                document.getElementById('photoDescription').value = '';
+                document.getElementById('photoCollection').value = '';
+                document.getElementById('photoInput').value = '';
+                selectedFiles = [];
+                updateUploadArea();
+                
+                await loadPhotos();
+            } catch (error) {
+                console.error('Error uploading photos:', error);
+                showError(`Failed to upload photos: ${error.message}`);
+            }
+        }
+
+        async function editPhotoCollections(photoId) {
+            const photo = photos[photoId];
+            const newCollectionName = prompt(`Current collection: ${photo.collection_name || 'None'}\n\nEnter new collection name (or leave empty for no collection):`);
+            
+            if (newCollectionName === null) return; // User cancelled
+            
+            const collection = collections.find(c => c.name === newCollectionName.trim());
+            const collectionId = collection ? collection.id : null;
+            
+            try {
+                const result = await apiCall(`/api/photos/${photoId}/collection`, {
+                    method: 'PUT',
+                    body: JSON.stringify({
+                        collection_id: collectionId,
+                        collection_name: newCollectionName.trim()
+                    })
+                });
+
+                showSuccess(result.message || 'Photo collection updated successfully!');
+                await loadPhotos();
+            } catch (error) {
+                console.error('Error updating photo collection:', error);
+                showError(`Failed to update photo collection: ${error.message}`);
+            }
+        }
+
+        async function deletePhoto(photoId) {
+            const photo = photos[photoId];
+            if (!confirm(`Are you sure you want to delete "${photo.title}"?`)) {
+                return;
+            }
+
+            try {
+                const result = await apiCall(`/api/photos/${photoId}`, {
+                    method: 'DELETE'
+                });
+
+                showSuccess(result.message || 'Photo deleted successfully!');
+                await loadPhotos();
+            } catch (error) {
+                console.error('Error deleting photo:', error);
+                showError(`Failed to delete photo: ${error.message}`);
+            }
+        }
+
+        function toggleSelectAll() {
+            const selectAll = document.getElementById('selectAll');
+            const checkboxes = document.querySelectorAll('.photo-checkbox');
+            
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = selectAll.checked;
+            });
+        }
+
+        async function addSelectedPhotosToCollection() {
+            const checkboxes = document.querySelectorAll('.photo-checkbox:checked');
+            const collectionSelect = document.getElementById('bulkCollection');
+            const collectionId = collectionSelect.value;
+            const collectionName = collectionSelect.selectedOptions[0]?.dataset.name || '';
+            
+            if (checkboxes.length === 0) {
+                showError('Please select photos to add to collection');
+                return;
+            }
+
+            let successCount = 0;
+            let errorCount = 0;
+
+            for (const checkbox of checkboxes) {
+                const photoId = parseInt(checkbox.dataset.photoId);
+                
+                try {
+                    await apiCall(`/api/photos/${photoId}/collection`, {
+                        method: 'PUT',
+                        body: JSON.stringify({
+                            collection_id: collectionId || null,
+                            collection_name: collectionName
+                        })
+                    });
+                    successCount++;
+                } catch (error) {
+                    console.error(`Error updating photo ${photoId}:`, error);
+                    errorCount++;
+                }
+            }
+
+            if (successCount > 0) {
+                showSuccess(`Successfully updated ${successCount} photo(s)!`);
+            }
+            if (errorCount > 0) {
+                showError(`Failed to update ${errorCount} photo(s)`);
+            }
+
+            // Reset selections
+            document.getElementById('selectAll').checked = false;
+            checkboxes.forEach(checkbox => checkbox.checked = false);
+            
+            await loadPhotos();
+        }
+
+        function viewCollection(collectionName) {
+            // Filter photos by collection
+            const collectionPhotos = photos.filter(photo => photo.collection_name === collectionName);
+            
+            if (collectionPhotos.length === 0) {
+                showError(`No photos found in collection "${collectionName}"`);
+                return;
+            }
+
+            // Display collection photos
+            const container = document.getElementById('photosContainer');
+            const photosHtml = collectionPhotos.map(photo => `
+                <div class="photo-card">
+                    <img src="${photo.url}" alt="${photo.title}" loading="lazy">
+                    <div class="photo-info">
+                        <div class="photo-title">${photo.title}</div>
+                        <div class="photo-description">${photo.description || ''}</div>
+                        <div class="collection-tag">${photo.collection_name}</div>
+                    </div>
+                </div>
+            `).join('');
+
+            container.innerHTML = `
+                <div style="margin-bottom: 20px;">
+                    <button class="btn btn-secondary" onclick="loadPhotos()">← Back to All Photos</button>
+                    <h3 style="display: inline-block; margin-left: 15px;">Collection: ${collectionName}</h3>
+                </div>
+                <div class="photos-grid">${photosHtml}</div>
+            `;
+        }
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            loadPhotos();
+            loadCollections();
+            
+            // Set up drag and drop
+            const uploadArea = document.querySelector('.upload-area');
+            
+            uploadArea.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+            
+            uploadArea.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+            });
+            
+            uploadArea.addEventListener('drop', function(e) {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                
+                const files = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith('image/'));
+                if (files.length > 0) {
+                    selectedFiles = files;
+                    updateUploadArea();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+
