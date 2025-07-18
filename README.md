@@ -1,7 +1,5 @@
 # 📸 George's Photo Gallery - PERSISTENT STORAGE VERSION
 
-## Please visit https://staticsite1-dl9k.onrender.com for main website hosted by me
-
 A beautiful, modern photo gallery with **permanent cloud storage** that never loses your photos!
 
 ## ✨ FEATURES

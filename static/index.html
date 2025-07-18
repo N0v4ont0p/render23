@@ -100,6 +100,7 @@
             overflow: hidden;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
             transition: transform 0.3s ease;
+            cursor: pointer;
         }
 
         .photo-card:hover {
@@ -141,6 +142,81 @@
 
         .no-collection {
             background: #a0aec0;
+        }
+
+        /* Photo Preview Modal */
+        .photo-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(5px);
+        }
+
+        .photo-modal-content {
+            position: relative;
+            margin: auto;
+            padding: 20px;
+            width: 90%;
+            max-width: 800px;
+            top: 50%;
+            transform: translateY(-50%);
+            text-align: center;
+        }
+
+        .photo-modal img {
+            max-width: 100%;
+            max-height: 70vh;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .photo-modal-info {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+            text-align: left;
+        }
+
+        .photo-modal-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+
+        .photo-modal-description {
+            color: #718096;
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+
+        .photo-modal-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            color: white;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 1001;
+        }
+
+        .close-modal:hover {
+            color: #ccc;
         }
 
         .admin-login {
@@ -204,6 +280,15 @@
 
         .btn-secondary:hover {
             background: #718096;
+        }
+
+        .btn-download {
+            background: #38b2ac;
+            color: white;
+        }
+
+        .btn-download:hover {
+            background: #319795;
         }
 
         .upload-area {
@@ -371,6 +456,15 @@
             .photo-actions {
                 justify-content: center;
             }
+
+            .photo-modal-content {
+                width: 95%;
+                padding: 10px;
+            }
+
+            .photo-modal-actions {
+                flex-direction: column;
+            }
         }
     </style>
 </head>
@@ -473,6 +567,7 @@
                             <option value="">No Collection</option>
                         </select>
                         <button class="btn btn-primary" onclick="addSelectedPhotosToCollection()">Add to Collection</button>
+                        <button class="btn btn-danger" onclick="deleteSelectedPhotos()">Delete Selected</button>
                     </div>
 
                     <div id="adminPhotosContainer">
@@ -483,11 +578,29 @@
         </div>
     </div>
 
+    <!-- Photo Preview Modal -->
+    <div id="photoModal" class="photo-modal">
+        <span class="close-modal" onclick="closePhotoModal()">&times;</span>
+        <div class="photo-modal-content">
+            <img id="modalImage" src="" alt="">
+            <div class="photo-modal-info">
+                <div id="modalTitle" class="photo-modal-title"></div>
+                <div id="modalDescription" class="photo-modal-description"></div>
+                <div id="modalCollection" class="collection-tag"></div>
+                <div class="photo-modal-actions">
+                    <button class="btn btn-download" onclick="downloadPhoto()">📥 Download Photo</button>
+                    <button class="btn btn-secondary" onclick="closePhotoModal()">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         let isAdminLoggedIn = false;
         let photos = [];
         let collections = [];
         let selectedFiles = [];
+        let currentModalPhoto = null;
 
         // Enhanced error handling
         function showError(message, container = null, showRetry = false, retryFunction = null) {
@@ -559,6 +672,53 @@
             }
         }
 
+        // Photo Modal Functions
+        function openPhotoModal(photo) {
+            currentModalPhoto = photo;
+            document.getElementById('modalImage').src = photo.url;
+            document.getElementById('modalTitle').textContent = photo.title;
+            document.getElementById('modalDescription').textContent = photo.description || '';
+            
+            const collectionTag = document.getElementById('modalCollection');
+            if (photo.collection_name) {
+                collectionTag.textContent = photo.collection_name;
+                collectionTag.className = 'collection-tag';
+            } else {
+                collectionTag.textContent = 'No Collection';
+                collectionTag.className = 'collection-tag no-collection';
+            }
+            
+            document.getElementById('photoModal').style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closePhotoModal() {
+            document.getElementById('photoModal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+            currentModalPhoto = null;
+        }
+
+        function downloadPhoto() {
+            if (currentModalPhoto) {
+                const link = document.createElement('a');
+                link.href = currentModalPhoto.url;
+                link.download = currentModalPhoto.title || 'photo';
+                link.target = '_blank';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                showSuccess('Photo download started!');
+            }
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('photoModal');
+            if (event.target === modal) {
+                closePhotoModal();
+            }
+        }
+
         // Load photos with error handling
         async function loadPhotos() {
             const container = document.getElementById('photosContainer');
@@ -618,8 +778,8 @@
                 return;
             }
 
-            const photosHtml = photos.map(photo => `
-                <div class="photo-card">
+            const photosHtml = photos.map((photo, index) => `
+                <div class="photo-card" onclick="openPhotoModal(${JSON.stringify(photo).replace(/"/g, '&quot;')})">
                     <img src="${photo.url}" alt="${photo.title}" loading="lazy">
                     <div class="photo-info">
                         <div class="photo-title">${photo.title}</div>
@@ -643,9 +803,7 @@
             }
 
             const collectionsHtml = collections.map(collection => {
-                const photoCount = photos.filter(photo => 
-                    photo.collection_name === collection.name
-                ).length;
+                const photoCount = collection.photo_count || 0;
                 
                 return `
                     <div class="collection-card" onclick="viewCollection('${collection.name}')">
@@ -667,9 +825,7 @@
             }
 
             const collectionsHtml = collections.map(collection => {
-                const photoCount = photos.filter(photo => 
-                    photo.collection_name === collection.name
-                ).length;
+                const photoCount = collection.photo_count || 0;
                 
                 return `
                     <div class="photo-item">
@@ -777,7 +933,7 @@
         }
 
         async function deleteCollection(collectionId, collectionName) {
-            if (!confirm(`Are you sure you want to delete the collection "${collectionName}"?`)) {
+            if (!confirm(`Are you sure you want to delete the collection "${collectionName}"?\n\nThis will remove the collection tag from all photos but keep the photos.`)) {
                 return;
             }
 
@@ -868,6 +1024,7 @@
                 updateUploadArea();
                 
                 await loadPhotos();
+                await loadCollections(); // Refresh to update photo counts
             } catch (error) {
                 console.error('Error uploading photos:', error);
                 showError(`Failed to upload photos: ${error.message}`);
@@ -894,6 +1051,7 @@
 
                 showSuccess(result.message || 'Photo collection updated successfully!');
                 await loadPhotos();
+                await loadCollections(); // Refresh to update photo counts
             } catch (error) {
                 console.error('Error updating photo collection:', error);
                 showError(`Failed to update photo collection: ${error.message}`);
@@ -913,6 +1071,7 @@
 
                 showSuccess(result.message || 'Photo deleted successfully!');
                 await loadPhotos();
+                await loadCollections(); // Refresh to update photo counts
             } catch (error) {
                 console.error('Error deleting photo:', error);
                 showError(`Failed to delete photo: ${error.message}`);
@@ -939,39 +1098,65 @@
                 return;
             }
 
-            let successCount = 0;
-            let errorCount = 0;
+            const photoIds = Array.from(checkboxes).map(cb => parseInt(cb.dataset.photoId));
 
-            for (const checkbox of checkboxes) {
-                const photoId = parseInt(checkbox.dataset.photoId);
+            try {
+                const result = await apiCall('/api/photos/bulk-update', {
+                    method: 'PUT',
+                    body: JSON.stringify({
+                        photo_ids: photoIds,
+                        collection_id: collectionId || null,
+                        collection_name: collectionName
+                    })
+                });
+
+                showSuccess(result.message || 'Photos updated successfully!');
                 
-                try {
-                    await apiCall(`/api/photos/${photoId}/collection`, {
-                        method: 'PUT',
-                        body: JSON.stringify({
-                            collection_id: collectionId || null,
-                            collection_name: collectionName
-                        })
-                    });
-                    successCount++;
-                } catch (error) {
-                    console.error(`Error updating photo ${photoId}:`, error);
-                    errorCount++;
-                }
+                // Reset selections
+                document.getElementById('selectAll').checked = false;
+                checkboxes.forEach(checkbox => checkbox.checked = false);
+                
+                await loadPhotos();
+                await loadCollections(); // Refresh to update photo counts
+            } catch (error) {
+                console.error('Error updating photos:', error);
+                showError(`Failed to update photos: ${error.message}`);
             }
+        }
 
-            if (successCount > 0) {
-                showSuccess(`Successfully updated ${successCount} photo(s)!`);
-            }
-            if (errorCount > 0) {
-                showError(`Failed to update ${errorCount} photo(s)`);
-            }
-
-            // Reset selections
-            document.getElementById('selectAll').checked = false;
-            checkboxes.forEach(checkbox => checkbox.checked = false);
+        async function deleteSelectedPhotos() {
+            const checkboxes = document.querySelectorAll('.photo-checkbox:checked');
             
-            await loadPhotos();
+            if (checkboxes.length === 0) {
+                showError('Please select photos to delete');
+                return;
+            }
+
+            if (!confirm(`Are you sure you want to delete ${checkboxes.length} selected photo(s)? This action cannot be undone.`)) {
+                return;
+            }
+
+            const photoIds = Array.from(checkboxes).map(cb => parseInt(cb.dataset.photoId));
+
+            try {
+                const result = await apiCall('/api/photos/bulk-delete', {
+                    method: 'DELETE',
+                    body: JSON.stringify({
+                        photo_ids: photoIds
+                    })
+                });
+
+                showSuccess(result.message || 'Photos deleted successfully!');
+                
+                // Reset selections
+                document.getElementById('selectAll').checked = false;
+                
+                await loadPhotos();
+                await loadCollections(); // Refresh to update photo counts
+            } catch (error) {
+                console.error('Error deleting photos:', error);
+                showError(`Failed to delete photos: ${error.message}`);
+            }
         }
 
         function viewCollection(collectionName) {
@@ -985,8 +1170,8 @@
 
             // Display collection photos
             const container = document.getElementById('photosContainer');
-            const photosHtml = collectionPhotos.map(photo => `
-                <div class="photo-card">
+            const photosHtml = collectionPhotos.map((photo, index) => `
+                <div class="photo-card" onclick="openPhotoModal(${JSON.stringify(photo).replace(/"/g, '&quot;')})">
                     <img src="${photo.url}" alt="${photo.title}" loading="lazy">
                     <div class="photo-info">
                         <div class="photo-title">${photo.title}</div>
@@ -1031,6 +1216,13 @@
                 if (files.length > 0) {
                     selectedFiles = files;
                     updateUploadArea();
+                }
+            });
+
+            // Keyboard shortcuts for modal
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && document.getElementById('photoModal').style.display === 'block') {
+                    closePhotoModal();
                 }
             });
         });

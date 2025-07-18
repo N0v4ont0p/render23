@@ -149,6 +149,45 @@ def load_photos_from_cloudinary():
         print(f"❌ Failed to load photos from Cloudinary: {e}")
         return []
 
+@retry_cloudinary(max_retries=3)
+def cleanup_orphaned_tags(collection_name):
+    """Clean up tags from photos when collection is deleted"""
+    try:
+        print(f"🧹 Cleaning up tags for deleted collection: {collection_name}")
+        
+        # Get all resources from Cloudinary
+        result = cloudinary.api.resources(
+            resource_type="image",
+            max_results=500,
+            context=True
+        )
+        
+        updated_count = 0
+        for resource in result.get('resources', []):
+            try:
+                context = resource.get('context', {}).get('custom', {}) if resource.get('context') else {}
+                current_collection = context.get('collection_name', '')
+                
+                # If this photo has the deleted collection tag, remove it
+                if current_collection == collection_name:
+                    # Update context to remove collection info
+                    new_context = {k: v for k, v in context.items() if k not in ['collection_id', 'collection_name']}
+                    
+                    cloudinary.uploader.add_context(new_context, resource.get('public_id'))
+                    updated_count += 1
+                    print(f"🏷️ Removed tag from photo: {resource.get('public_id')}")
+                    
+            except Exception as e:
+                print(f"⚠️ Error cleaning tag from photo {resource.get('public_id', 'unknown')}: {e}")
+                continue
+        
+        print(f"✅ Cleaned tags from {updated_count} photos")
+        return updated_count
+        
+    except Exception as e:
+        print(f"❌ Failed to cleanup tags: {e}")
+        return 0
+
 # API Routes with comprehensive error handling
 
 @app.route('/')
@@ -170,8 +209,16 @@ def get_photos():
 @app.route('/api/collections')
 @handle_errors
 def get_collections():
-    """Get all collections with error handling"""
+    """Get all collections with accurate photo counts"""
     collections = load_collections_data()
+    photos = load_photos_from_cloudinary()
+    
+    # Update photo counts for each collection
+    for collection in collections:
+        collection_name = collection.get('name', '')
+        photo_count = len([photo for photo in photos if photo.get('collection_name') == collection_name])
+        collection['photo_count'] = photo_count
+    
     return jsonify(collections)
 
 @app.route('/api/collections', methods=['POST'])
@@ -223,7 +270,7 @@ def create_collection():
 @app.route('/api/collections/<int:collection_id>', methods=['DELETE'])
 @handle_errors
 def delete_collection(collection_id):
-    """Delete a collection with error handling"""
+    """Delete a collection with tag cleanup"""
     try:
         collections = load_collections_data()
         
@@ -237,10 +284,18 @@ def delete_collection(collection_id):
         if not collection_to_delete:
             return jsonify({'error': 'Collection not found', 'success': False}), 404
         
+        collection_name = collection_to_delete.get('name', '')
+        
+        # Clean up tags from photos
+        cleanup_count = cleanup_orphaned_tags(collection_name)
+        
         # Save updated collections
         if save_collections_data(collections):
-            print(f"🗑️ Deleted collection: {collection_to_delete.get('name', 'Unknown')}")
-            return jsonify({'message': 'Collection deleted successfully', 'success': True})
+            print(f"🗑️ Deleted collection: {collection_name}")
+            return jsonify({
+                'message': f'Collection deleted successfully. Cleaned tags from {cleanup_count} photos.',
+                'success': True
+            })
         else:
             return jsonify({'error': 'Failed to save changes', 'success': False}), 500
             
@@ -276,9 +331,12 @@ def update_photo_collection(photo_id):
         context_data = {
             'title': photo.get('title', ''),
             'description': photo.get('description', ''),
-            'collection_id': str(collection_id) if collection_id else '',
-            'collection_name': collection_name
         }
+        
+        # Add collection info if provided
+        if collection_id and collection_name:
+            context_data['collection_id'] = str(collection_id)
+            context_data['collection_name'] = collection_name
         
         # Remove empty values
         context_data = {k: v for k, v in context_data.items() if v}
@@ -293,6 +351,127 @@ def update_photo_collection(photo_id):
             
     except Exception as e:
         print(f"❌ Error updating photo collection: {e}")
+        return jsonify({'error': str(e), 'success': False}), 500
+
+@app.route('/api/photos/bulk-update', methods=['PUT'])
+@handle_errors
+def bulk_update_photos():
+    """Bulk update photos collection assignment"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request data is required', 'success': False}), 400
+        
+        photo_ids = data.get('photo_ids', [])
+        collection_id = data.get('collection_id')
+        collection_name = data.get('collection_name', '')
+        
+        if not photo_ids:
+            return jsonify({'error': 'No photos selected', 'success': False}), 400
+        
+        # Load photos
+        photos = load_photos_from_cloudinary()
+        
+        success_count = 0
+        error_count = 0
+        
+        for photo_id in photo_ids:
+            try:
+                if photo_id >= len(photos):
+                    error_count += 1
+                    continue
+                
+                photo = photos[photo_id]
+                public_id = photo.get('public_id')
+                
+                if not public_id:
+                    error_count += 1
+                    continue
+                
+                # Update photo context in Cloudinary
+                context_data = {
+                    'title': photo.get('title', ''),
+                    'description': photo.get('description', ''),
+                }
+                
+                # Add collection info if provided
+                if collection_id and collection_name:
+                    context_data['collection_id'] = str(collection_id)
+                    context_data['collection_name'] = collection_name
+                
+                # Remove empty values
+                context_data = {k: v for k, v in context_data.items() if v}
+                
+                cloudinary.uploader.add_context(context_data, public_id)
+                success_count += 1
+                print(f"✅ Updated photo collection: {photo.get('title', 'Untitled')}")
+                
+            except Exception as photo_error:
+                print(f"❌ Error updating photo {photo_id}: {photo_error}")
+                error_count += 1
+                continue
+        
+        message = f"Successfully updated {success_count} photo(s)"
+        if error_count > 0:
+            message += f", failed to update {error_count} photo(s)"
+        
+        return jsonify({'message': message, 'success': True, 'updated_count': success_count})
+        
+    except Exception as e:
+        print(f"❌ Error in bulk update: {e}")
+        return jsonify({'error': str(e), 'success': False}), 500
+
+@app.route('/api/photos/bulk-delete', methods=['DELETE'])
+@handle_errors
+def bulk_delete_photos():
+    """Bulk delete photos"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request data is required', 'success': False}), 400
+        
+        photo_ids = data.get('photo_ids', [])
+        
+        if not photo_ids:
+            return jsonify({'error': 'No photos selected', 'success': False}), 400
+        
+        # Load photos
+        photos = load_photos_from_cloudinary()
+        
+        success_count = 0
+        error_count = 0
+        
+        for photo_id in photo_ids:
+            try:
+                if photo_id >= len(photos):
+                    error_count += 1
+                    continue
+                
+                photo = photos[photo_id]
+                public_id = photo.get('public_id')
+                
+                if not public_id:
+                    error_count += 1
+                    continue
+                
+                # Delete from Cloudinary
+                cloudinary.uploader.destroy(public_id)
+                success_count += 1
+                print(f"🗑️ Deleted photo: {photo.get('title', 'Untitled')}")
+                
+            except Exception as photo_error:
+                print(f"❌ Error deleting photo {photo_id}: {photo_error}")
+                error_count += 1
+                continue
+        
+        message = f"Successfully deleted {success_count} photo(s)"
+        if error_count > 0:
+            message += f", failed to delete {error_count} photo(s)"
+        
+        return jsonify({'message': message, 'success': True, 'deleted_count': success_count})
+        
+    except Exception as e:
+        print(f"❌ Error in bulk delete: {e}")
         return jsonify({'error': str(e), 'success': False}), 500
 
 @app.route('/api/photos', methods=['POST'])
@@ -412,7 +591,8 @@ def internal_error(error):
     return jsonify({'error': 'Internal server error', 'success': False}), 500
 
 if __name__ == '__main__':
-    print("🚀 Starting George's Photo Gallery (STABLE VERSION)")
+    print("🚀 Starting George's Photo Gallery (ENHANCED VERSION)")
     print("🛡️ Enhanced error handling and stability features enabled")
-    app.run(host='0.0.0.0', port=5006, debug=False)
+    print("✨ New features: Accurate photo counts, tag cleanup, mass delete, photo preview")
+    app.run(host='0.0.0.0', port=5008, debug=False)
 
