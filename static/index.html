@@ -130,20 +130,6 @@
             line-height: 1.5;
         }
 
-        .collection-tag {
-            display: inline-block;
-            background: #667eea;
-            color: white;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            margin-bottom: 15px;
-        }
-
-        .no-collection {
-            background: #a0aec0;
-        }
-
         /* Photo Preview Modal */
         .photo-modal {
             display: none;
@@ -217,6 +203,67 @@
 
         .close-modal:hover {
             color: #ccc;
+        }
+
+        /* Edit Collection Modal */
+        .edit-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+        }
+
+        .edit-modal-content {
+            position: relative;
+            margin: auto;
+            padding: 30px;
+            width: 90%;
+            max-width: 500px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .edit-modal-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .edit-form-group {
+            margin-bottom: 20px;
+        }
+
+        .edit-form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        .edit-form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 1rem;
+            background: white;
+        }
+
+        .edit-modal-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 20px;
         }
 
         .admin-login {
@@ -457,12 +504,12 @@
                 justify-content: center;
             }
 
-            .photo-modal-content {
+            .photo-modal-content, .edit-modal-content {
                 width: 95%;
                 padding: 10px;
             }
 
-            .photo-modal-actions {
+            .photo-modal-actions, .edit-modal-actions {
                 flex-direction: column;
             }
         }
@@ -586,11 +633,27 @@
             <div class="photo-modal-info">
                 <div id="modalTitle" class="photo-modal-title"></div>
                 <div id="modalDescription" class="photo-modal-description"></div>
-                <div id="modalCollection" class="collection-tag"></div>
                 <div class="photo-modal-actions">
                     <button class="btn btn-download" onclick="downloadPhoto()">📥 Download Photo</button>
                     <button class="btn btn-secondary" onclick="closePhotoModal()">Close</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Collection Modal -->
+    <div id="editModal" class="edit-modal">
+        <div class="edit-modal-content">
+            <div class="edit-modal-title">Edit Photo Collection</div>
+            <div class="edit-form-group">
+                <label>Select Collection:</label>
+                <select id="editCollectionSelect">
+                    <option value="">Remove from Collection</option>
+                </select>
+            </div>
+            <div class="edit-modal-actions">
+                <button class="btn btn-primary" onclick="savePhotoCollection()">Save Changes</button>
+                <button class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
             </div>
         </div>
     </div>
@@ -601,6 +664,7 @@
         let collections = [];
         let selectedFiles = [];
         let currentModalPhoto = null;
+        let currentEditPhotoId = null;
 
         // Enhanced error handling
         function showError(message, container = null, showRetry = false, retryFunction = null) {
@@ -679,15 +743,6 @@
             document.getElementById('modalTitle').textContent = photo.title;
             document.getElementById('modalDescription').textContent = photo.description || '';
             
-            const collectionTag = document.getElementById('modalCollection');
-            if (photo.collection_name) {
-                collectionTag.textContent = photo.collection_name;
-                collectionTag.className = 'collection-tag';
-            } else {
-                collectionTag.textContent = 'No Collection';
-                collectionTag.className = 'collection-tag no-collection';
-            }
-            
             document.getElementById('photoModal').style.display = 'block';
             document.body.style.overflow = 'hidden';
         }
@@ -700,22 +755,109 @@
 
         function downloadPhoto() {
             if (currentModalPhoto) {
+                // Create a temporary anchor element to force download
                 const link = document.createElement('a');
                 link.href = currentModalPhoto.url;
                 link.download = currentModalPhoto.title || 'photo';
-                link.target = '_blank';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                showSuccess('Photo download started!');
+                
+                // Add crossorigin attribute to handle CORS
+                link.setAttribute('crossorigin', 'anonymous');
+                
+                // Try to fetch the image and create a blob URL for proper download
+                fetch(currentModalPhoto.url)
+                    .then(response => response.blob())
+                    .then(blob => {
+                        const blobUrl = URL.createObjectURL(blob);
+                        link.href = blobUrl;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        URL.revokeObjectURL(blobUrl);
+                        showSuccess('Photo download started!');
+                    })
+                    .catch(error => {
+                        // Fallback to direct link if fetch fails
+                        console.warn('Fetch failed, using direct link:', error);
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        showSuccess('Photo download started!');
+                    });
             }
         }
 
-        // Close modal when clicking outside
+        // Edit Collection Modal Functions
+        function openEditModal(photoId) {
+            currentEditPhotoId = photoId;
+            const photo = photos[photoId];
+            
+            // Update modal title
+            document.querySelector('.edit-modal-title').textContent = `Edit Collection for "${photo.title}"`;
+            
+            // Populate collection select
+            const select = document.getElementById('editCollectionSelect');
+            select.innerHTML = '<option value="">Remove from Collection</option>';
+            
+            collections.forEach(collection => {
+                const option = document.createElement('option');
+                option.value = collection.id;
+                option.textContent = collection.name;
+                option.dataset.name = collection.name;
+                
+                // Select current collection if photo has one
+                if (photo.collection_name === collection.name) {
+                    option.selected = true;
+                }
+                
+                select.appendChild(option);
+            });
+            
+            document.getElementById('editModal').style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+            currentEditPhotoId = null;
+        }
+
+        async function savePhotoCollection() {
+            if (currentEditPhotoId === null) return;
+            
+            const select = document.getElementById('editCollectionSelect');
+            const collectionId = select.value;
+            const collectionName = select.selectedOptions[0]?.dataset.name || '';
+            
+            try {
+                const result = await apiCall(`/api/photos/${currentEditPhotoId}/collection`, {
+                    method: 'PUT',
+                    body: JSON.stringify({
+                        collection_id: collectionId || null,
+                        collection_name: collectionName
+                    })
+                });
+
+                showSuccess(result.message || 'Photo collection updated successfully!');
+                closeEditModal();
+                await loadPhotos();
+                await loadCollections(); // Refresh to update photo counts
+            } catch (error) {
+                console.error('Error updating photo collection:', error);
+                showError(`Failed to update photo collection: ${error.message}`);
+            }
+        }
+
+        // Close modals when clicking outside
         window.onclick = function(event) {
-            const modal = document.getElementById('photoModal');
-            if (event.target === modal) {
+            const photoModal = document.getElementById('photoModal');
+            const editModal = document.getElementById('editModal');
+            
+            if (event.target === photoModal) {
                 closePhotoModal();
+            }
+            if (event.target === editModal) {
+                closeEditModal();
             }
         }
 
@@ -784,9 +926,6 @@
                     <div class="photo-info">
                         <div class="photo-title">${photo.title}</div>
                         <div class="photo-description">${photo.description || ''}</div>
-                        <div class="collection-tag ${photo.collection_name ? '' : 'no-collection'}">
-                            ${photo.collection_name || 'No Collection'}
-                        </div>
                     </div>
                 </div>
             `).join('');
@@ -858,12 +997,9 @@
                     <div class="photo-details">
                         <div class="photo-title">${photo.title}</div>
                         <div class="photo-description">${photo.description || ''}</div>
-                        <div class="collection-tag ${photo.collection_name ? '' : 'no-collection'}">
-                            ${photo.collection_name || 'No Collection'}
-                        </div>
                     </div>
                     <div class="photo-actions">
-                        <button class="btn btn-primary" onclick="editPhotoCollections(${index})">Edit Collections</button>
+                        <button class="btn btn-primary" onclick="openEditModal(${index})">Edit Collection</button>
                         <button class="btn btn-danger" onclick="deletePhoto(${index})">Delete</button>
                     </div>
                 </div>
@@ -1031,33 +1167,6 @@
             }
         }
 
-        async function editPhotoCollections(photoId) {
-            const photo = photos[photoId];
-            const newCollectionName = prompt(`Current collection: ${photo.collection_name || 'None'}\n\nEnter new collection name (or leave empty for no collection):`);
-            
-            if (newCollectionName === null) return; // User cancelled
-            
-            const collection = collections.find(c => c.name === newCollectionName.trim());
-            const collectionId = collection ? collection.id : null;
-            
-            try {
-                const result = await apiCall(`/api/photos/${photoId}/collection`, {
-                    method: 'PUT',
-                    body: JSON.stringify({
-                        collection_id: collectionId,
-                        collection_name: newCollectionName.trim()
-                    })
-                });
-
-                showSuccess(result.message || 'Photo collection updated successfully!');
-                await loadPhotos();
-                await loadCollections(); // Refresh to update photo counts
-            } catch (error) {
-                console.error('Error updating photo collection:', error);
-                showError(`Failed to update photo collection: ${error.message}`);
-            }
-        }
-
         async function deletePhoto(photoId) {
             const photo = photos[photoId];
             if (!confirm(`Are you sure you want to delete "${photo.title}"?`)) {
@@ -1176,7 +1285,6 @@
                     <div class="photo-info">
                         <div class="photo-title">${photo.title}</div>
                         <div class="photo-description">${photo.description || ''}</div>
-                        <div class="collection-tag">${photo.collection_name}</div>
                     </div>
                 </div>
             `).join('');
@@ -1219,10 +1327,15 @@
                 }
             });
 
-            // Keyboard shortcuts for modal
+            // Keyboard shortcuts for modals
             document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape' && document.getElementById('photoModal').style.display === 'block') {
-                    closePhotoModal();
+                if (e.key === 'Escape') {
+                    if (document.getElementById('photoModal').style.display === 'block') {
+                        closePhotoModal();
+                    }
+                    if (document.getElementById('editModal').style.display === 'block') {
+                        closeEditModal();
+                    }
                 }
             });
         });

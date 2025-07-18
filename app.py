@@ -333,10 +333,13 @@ def update_photo_collection(photo_id):
             'description': photo.get('description', ''),
         }
         
-        # Add collection info if provided
+        # Add collection info if provided, or remove if empty
         if collection_id and collection_name:
             context_data['collection_id'] = str(collection_id)
             context_data['collection_name'] = collection_name
+        elif collection_id == '' or collection_id is None:
+            # Remove collection assignment - don't add collection fields to context
+            pass
         
         # Remove empty values
         context_data = {k: v for k, v in context_data.items() if v}
@@ -394,10 +397,13 @@ def bulk_update_photos():
                     'description': photo.get('description', ''),
                 }
                 
-                # Add collection info if provided
+                # Add collection info if provided, or remove if empty
                 if collection_id and collection_name:
                     context_data['collection_id'] = str(collection_id)
                     context_data['collection_name'] = collection_name
+                elif collection_id == '' or collection_id is None:
+                    # Remove collection assignment - don't add collection fields to context
+                    pass
                 
                 # Remove empty values
                 context_data = {k: v for k, v in context_data.items() if v}
@@ -594,5 +600,5 @@ if __name__ == '__main__':
     print("🚀 Starting George's Photo Gallery (ENHANCED VERSION)")
     print("🛡️ Enhanced error handling and stability features enabled")
     print("✨ New features: Accurate photo counts, tag cleanup, mass delete, photo preview")
-    app.run(host='0.0.0.0', port=5008, debug=False)
+    app.run(host='0.0.0.0', port=5009, debug=False)
 
