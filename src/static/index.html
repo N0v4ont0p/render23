@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📸 George's Photo Gallery</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <h1>📸 George's Photo Gallery</h1>
+                <p>Your personal photo collection with collections</p>
+            </div>
+            <nav class="nav">
+                <button id="adminBtn" class="nav-btn">Admin</button>
+                <button id="homeBtn" class="nav-btn active">Gallery</button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+        <!-- Public Gallery View -->
+        <div id="galleryView" class="view active">
+            <!-- Collections Section -->
+            <section class="section">
+                <div class="section-header">
+                    <h2>Collections</h2>
+                    <div class="section-subtitle">Organized photo collections</div>
+                </div>
+                <div id="collectionsGrid" class="collections-grid">
+                    <div class="loading-state">
+                        <div class="loading-spinner"></div>
+                        <p>Loading collections...</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- All Photos Section -->
+            <section class="section">
+                <div class="section-header">
+                    <h2 id="photosTitle">All Photos</h2>
+                    <div class="section-subtitle" id="photosSubtitle">Your complete photo collection</div>
+                    <button id="backToGallery" class="back-btn" style="display: none;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="m15 18-6-6 6-6"/>
+                        </svg>
+                        Back to Gallery
+                    </button>
+                </div>
+                <div id="photosGrid" class="photos-grid">
+                    <div class="loading-state">
+                        <div class="loading-spinner"></div>
+                        <p>Loading photos...</p>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Admin Panel View -->
+        <div id="adminView" class="view">
+            <!-- Admin Login -->
+            <div id="adminLogin" class="admin-login">
+                <div class="login-card">
+                    <h2>Admin Access</h2>
+                    <p>Enter your password to access the admin panel</p>
+                    <form id="loginForm">
+                        <div class="input-group">
+                            <input type="password" id="adminPassword" placeholder="Admin Password" required>
+                        </div>
+                        <button type="submit" class="btn-primary">Login</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Admin Panel -->
+            <div id="adminPanel" class="admin-panel" style="display: none;">
+                <!-- Upload Section -->
+                <section class="admin-section">
+                    <h2>Upload Photos</h2>
+                    <div class="upload-area" id="uploadArea">
+                        <div class="upload-content">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="7,10 12,15 17,10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                            <h3>Drop photos here or click to upload</h3>
+                            <p>Support for multiple files</p>
+                        </div>
+                        <input type="file" id="fileInput" multiple accept="image/*" style="display: none;">
+                    </div>
+                    
+                    <div id="uploadForm" class="upload-form" style="display: none;">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Collection</label>
+                                <select id="uploadCollection">
+                                    <option value="">No Collection</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="filesList" class="files-list"></div>
+                        <button id="uploadBtn" class="btn-primary">Upload Photos</button>
+                    </div>
+                </section>
+
+                <!-- Collections Management -->
+                <section class="admin-section">
+                    <h2>Manage Collections</h2>
+                    <div class="collection-form">
+                        <div class="input-group">
+                            <input type="text" id="newCollectionName" placeholder="Collection name">
+                            <button id="addCollectionBtn" class="btn-secondary">Add Collection</button>
+                        </div>
+                    </div>
+                    <div id="collectionsList" class="collections-list"></div>
+                </section>
+
+                <!-- Photos Management -->
+                <section class="admin-section">
+                    <h2>Manage Photos</h2>
+                    <div class="photos-controls">
+                        <div class="bulk-controls">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="selectAllPhotos">
+                                <span class="checkmark"></span>
+                                Select All
+                            </label>
+                            <select id="bulkCollection">
+                                <option value="">Choose Collection</option>
+                            </select>
+                            <button id="bulkAssignBtn" class="btn-secondary">Assign to Collection</button>
+                            <button id="bulkDeleteBtn" class="btn-danger">Delete Selected</button>
+                        </div>
+                    </div>
+                    <div id="adminPhotosList" class="admin-photos-list"></div>
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <!-- Photo Preview Modal -->
+    <div id="photoModal" class="modal">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content">
+            <button class="modal-close" id="closeModal">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </button>
+            <div class="modal-body">
+                <img id="modalImage" src="" alt="">
+                <div class="modal-info">
+                    <h3 id="modalTitle"></h3>
+                    <p id="modalDescription"></p>
+                    <button id="downloadBtn" class="btn-primary">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="7,10 12,15 17,10"/>
+                            <line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                        Download
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+
